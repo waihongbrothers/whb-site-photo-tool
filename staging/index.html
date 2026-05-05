@@ -770,8 +770,7 @@ function attachToolbar(state, wrap) {
     }
   });
 
-  // Undo / Delete / Clear
-  wrap.querySelector('.undo-btn').addEventListener('click', () => undo(state));
+  // Delete / Clear (Undo lives on the dock now)
   wrap.querySelector('.delete-btn').addEventListener('click', () => deleteSelected(state));
   wrap.querySelector('.clear-btn').addEventListener('click', () => clearAll(state));
 
