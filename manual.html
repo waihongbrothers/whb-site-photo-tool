@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WHB Site Photo Tool — User Manual / 使用手册</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    margin: 0;
+    padding: 0 16px 80px 16px;
+    background: #f7f8fa;
+    color: #222;
+    line-height: 1.55;
+  }
+  .lang-bar {
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 14px 16px;
+    margin: 0 -16px 16px -16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .lang-bar h1 { font-size: 15px; margin: 0; color: #333; }
+  .lang-toggle button {
+    padding: 6px 14px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 6px;
+    margin-left: 4px;
+  }
+  .lang-toggle button.active {
+    background: #2196F3;
+    color: white;
+    border-color: #2196F3;
+  }
+  .container { max-width: 760px; margin: auto; }
+  h2 {
+    font-size: 19px;
+    color: #1a1a1a;
+    border-left: 4px solid #2196F3;
+    padding-left: 10px;
+    margin: 32px 0 12px 0;
+  }
+  h3 { font-size: 15px; color: #333; margin: 18px 0 8px 0; }
+  p, li { font-size: 14px; }
+  ol, ul { padding-left: 24px; }
+  ol li, ul li { margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+  th { background: #f0f2f5; }
+  .swatch {
+    display: inline-block; width: 14px; height: 14px;
+    border-radius: 3px; border: 1px solid #999;
+    vertical-align: middle; margin-right: 4px;
+  }
+  .tip {
+    background: #e7f3ff;
+    border-left: 4px solid #2196F3;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .warn {
+    background: #fff4e0;
+    border-left: 4px solid #ff9800;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  kbd {
+    background: #f0f0f0; border: 1px solid #ccc; border-radius: 3px;
+    padding: 1px 6px; font-size: 12px; font-family: inherit;
+  }
+  .toc {
+    background: white; border-radius: 8px; padding: 12px 16px;
+    margin: 16px 0 24px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .toc a { color: #2196F3; text-decoration: none; display: block; padding: 4px 0; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+  .lang-cn { display: none; }
+  body.lang-cn-active .lang-en { display: none; }
+  body.lang-cn-active .lang-cn { display: block; }
+  .footer {
+    margin-top: 48px; padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    color: #888; font-size: 12px; text-align: center;
+  }
+  .back-to-tool {
+    display: inline-block;
+    background: #43a047; color: white;
+    padding: 12px 22px; border-radius: 30px;
+    text-decoration: none; font-weight: 600;
+    margin: 16px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="lang-bar">
+  <h1>WHB Site Photo Tool — Manual / 使用手册</h1>
+  <div class="lang-toggle">
+    <button id="btn-en" class="active" onclick="setLang('en')">EN</button>
+    <button id="btn-cn" onclick="setLang('cn')">中文</button>
+  </div>
+</div>
+
+<div class="container">
+
+<a href="index.html" class="back-to-tool">← <span class="lang-en">Back to Tool</span><span class="lang-cn">返回工具</span></a>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: WHAT IS THIS -->
+<!-- ============================================================ -->
+<h2 id="what">1. What is this tool? / 这是什么工具？</h2>
+
+<div class="lang-en">
+<p>The WHB Site Photo Tool lets you mark up site inspection photos and generate clean PSTC (Photo Send To Customer) images right from your iPad. No need to wait for the project team to redraw with Adobe Illustrator — you produce the final image directly from the field.</p>
+<p><b>Replaces:</b> the Adobe Illustrator step in the existing Project Team SOP (page 11–21).</p>
+</div>
+
+<div class="lang-cn">
+<p>这是 PSTC（Photo Send To Customer）的快速制作工具。现场拍照后直接在 iPad 上画线、加颜色、加水印，一键生成图给客户。不用再等 project team 用 Adobe Illustrator 重画。</p>
+<p><b>取代：</b>Project Team SOP（page 11–21）的 Adobe Illustrator 步骤。</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: QUICK START -->
+<!-- ============================================================ -->
+<h2 id="start">2. Quick Start / 快速上手</h2>
+
+<div class="lang-en">
+<ol>
+  <li><b>Project Info</b> — type Customer Name (e.g. <kbd>JOHN</kbd>) and last 4 digits of phone (e.g. <kbd>0452</kbd>).</li>
+  <li><b>Upload Photos</b> — tap "Choose Files" → select photos from camera roll (any number).</li>
+  <li><b>For each photo:</b>
+    <ul>
+      <li>Type the Site Address (e.g. <kbd>15, JALAN IMPIAN INDAH 9</kbd>).</li>
+      <li>On the floating dock (top-right of the photo), tap a <b>Tool</b> (e.g. ▭ Rectangle).</li>
+      <li>Tap the <b>Part chip</b> (e.g. ● Water Tank) → pick the part — colour is set automatically.</li>
+      <li>Draw on the photo.</li>
+    </ul>
+  </li>
+  <li><b>Generate</b> — tap the green <b>Generate Images</b> button at the bottom-right.</li>
+  <li><b>Download</b> — single photo = JPG, multiple photos = ZIP. Save to NAS following the existing folder structure.</li>
+</ol>
+
+<div class="tip"><b>Tip:</b> The whole process takes about 2 minutes per project once you're used to it.</div>
+</div>
+
+<div class="lang-cn">
+<ol>
+  <li><b>Project Info</b> — 输入客户名（例 <kbd>JOHN</kbd>）和电话末 4 位（例 <kbd>0452</kbd>）。</li>
+  <li><b>Upload Photos</b> — tap "Choose Files" → 从相册选照片（数量不限）。</li>
+  <li><b>每张照片：</b>
+    <ul>
+      <li>输入 Site Address（例 <kbd>15, JALAN IMPIAN INDAH 9</kbd>）。</li>
+      <li>照片右上角的浮动工具栏（dock）→ 点 <b>Tool</b>（例 ▭ Rectangle）。</li>
+      <li>点 <b>Part chip</b>（例 ● Water Tank）→ 选 part — 颜色会自动套用。</li>
+      <li>在照片上画。</li>
+    </ul>
+  </li>
+  <li><b>Generate</b> — 按右下角绿色 <b>Generate Images</b> 按钮。</li>
+  <li><b>下载</b> — 单张 = JPG；多张 = ZIP。按现有 NAS 资料夹结构保存。</li>
+</ol>
+
+<div class="tip"><b>Tip：</b>熟练后整个流程 1 个项目约 2 分钟搞定。</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: TOOLS -->
+<!-- ============================================================ -->
+<h2 id="tools">3. Tools (Floating Dock) / 工具栏说明</h2>
+
+<div class="lang-en">
+<p>The floating dock sits in the top-right of each photo. From top to bottom:</p>
+<table>
+  <tr><th>Icon</th><th>Tool</th><th>How to use</th></tr>
+  <tr><td>▭</td><td>Rectangle</td><td>Drag from one corner to the opposite corner.</td></tr>
+  <tr><td>⬠</td><td>Polygon</td><td>Tap multiple points → tap the green <b>✓ Finish Polygon</b> button (top-left of photo) to close the shape.</td></tr>
+  <tr><td>／</td><td>Line</td><td>Drag for a straight line.</td></tr>
+  <tr><td>✏️</td><td>Freehand</td><td>Use Apple Pencil or finger to draw freely. Great for handwritten numbers (1, 2, 3…).</td></tr>
+  <tr><td>A</td><td>Number / Text</td><td>Tap on the photo → type text in the popup.</td></tr>
+  <tr><td>✋</td><td>Select</td><td>Tap an existing shape → drag to move, drag corner handles to resize, or tap <b>✕ Delete Selected</b>.</td></tr>
+  <tr><td>● Part chip</td><td>Change Part</td><td>Tap the chip → modal pops up → pick a Part → colour set automatically.</td></tr>
+  <tr><td>↶</td><td>Undo</td><td>Remove the last shape you drew.</td></tr>
+  <tr><td>＋ / − / 100%</td><td>Zoom</td><td><kbd>＋</kbd> zoom in, <kbd>−</kbd> zoom out, <kbd>100%</kbd> resets zoom.</td></tr>
+</table>
+</div>
+
+<div class="lang-cn">
+<p>浮动工具栏（dock）在每张照片的右上角。从上到下：</p>
+<table>
+  <tr><th>图标</th><th>工具</th><th>用法</th></tr>
+  <tr><td>▭</td><td>Rectangle 矩形</td><td>从一角拖到对角。</td></tr>
+  <tr><td>⬠</td><td>Polygon 多边形</td><td>点多个点 → 照片左上角点绿色 <b>✓ Finish Polygon</b> 收口。</td></tr>
+  <tr><td>／</td><td>Line 直线</td><td>拖动画一条直线。</td></tr>
+  <tr><td>✏️</td><td>Freehand 手绘</td><td>用 Apple Pencil 或手指自由画。适合手写数字（1、2、3…）。</td></tr>
+  <tr><td>A</td><td>Number / Text 文字</td><td>点照片 → 弹窗输入文字。</td></tr>
+  <tr><td>✋</td><td>Select 选择</td><td>点中已有图形 → 拖动 = 移动；拖角落 = 缩放；按 <b>✕ Delete Selected</b> 删除。</td></tr>
+  <tr><td>● Part chip</td><td>换 Part</td><td>点 chip → 弹出 modal → 选 Part → 颜色自动套用。</td></tr>
+  <tr><td>↶</td><td>Undo 撤销</td><td>删除最后画的一笔。</td></tr>
+  <tr><td>＋ / − / 100%</td><td>缩放</td><td><kbd>＋</kbd> 放大，<kbd>−</kbd> 缩小，<kbd>100%</kbd> 还原。</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: COLOUR CODES -->
+<!-- ============================================================ -->
+<h2 id="colors">4. Colour Codes / 颜色对照</h2>
+
+<div class="lang-en">
+<p>You don't need to memorize colours — pick the <b>Part</b> and the system applies the correct colour automatically. This table is for reference only.</p>
+</div>
+<div class="lang-cn">
+<p>不需要记颜色 — 选 <b>Part</b>，系统会自动套用对的颜色。下表只供参考。</p>
+</div>
+
+<table>
+  <tr>
+    <th><span class="lang-en">Colour</span><span class="lang-cn">颜色</span></th>
+    <th><span class="lang-en">Parts</span><span class="lang-cn">部位</span></th>
+  </tr>
+  <tr><td><span class="swatch" style="background:#F52900"></span> Red / 红</td><td>Roof Ridge, Roof Capping</td></tr>
+  <tr><td><span class="swatch" style="background:#F3FF3A"></span> Yellow / 黄</td><td>Party Wall, Wall Flashing</td></tr>
+  <tr><td><span class="swatch" style="background:#4DFF1D"></span> Green / 绿</td><td>Slab, Exhaust Pipe, Membrane</td></tr>
+  <tr><td><span class="swatch" style="background:#0F3FF3"></span> Blue / 蓝</td><td>V Gutter, Roof Gutter, Down Pipe</td></tr>
+  <tr><td><span class="swatch" style="background:#27D7FF"></span> Light Blue / 浅蓝</td><td>Water Tank, Bathroom</td></tr>
+  <tr><td><span class="swatch" style="background:#FF27E7"></span> Pink / 粉</td><td>Roof Replacement, PU Injection, PU Coat</td></tr>
+  <tr><td><span class="swatch" style="background:#9200A2"></span> Purple / 紫</td><td>Others（其他）</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: ZOOM & PAN -->
+<!-- ============================================================ -->
+<h2 id="zoom">5. Zoom &amp; Pan / 缩放和平移</h2>
+
+<div class="lang-en">
+<ul>
+  <li><b>Pinch with 2 fingers</b> on the photo → zoom in / out, focused on where your fingers are. Use this to zoom into corners (e.g. top-left of the roof).</li>
+  <li><b>Drag with 2 fingers</b> while pinching → pans the photo. (Same gesture as iOS Photos.)</li>
+  <li><b>＋ / − buttons</b> on the dock → zoom in/out (centred on the canvas).</li>
+  <li><b>100% button</b> on the dock → reset zoom to default.</li>
+</ul>
+
+<div class="tip"><b>Apple Pencil + zoom</b> = the most precise drawing combo. Pinch in to a small detail, then draw a thin line with the Pencil.</div>
+</div>
+
+<div class="lang-cn">
+<ul>
+  <li><b>双指 pinch</b> 在照片上 → 缩放，焦点在两根手指中间。用来放大角落（屋顶左上角等）。</li>
+  <li><b>双指拖动</b>（捏着不放再拖）→ 平移画面。（跟 iOS Photos 一样）</li>
+  <li>Dock 上的 <b>＋ / −</b> → 以画面中心放大/缩小。</li>
+  <li>Dock 上的 <b>100%</b> → 一键还原。</li>
+</ul>
+
+<div class="tip"><b>Apple Pencil + zoom</b> = 最精准的组合。先 pinch 放大细节区域，再用 Pencil 画细线。</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: WATERMARK / ADDRESS -->
+<!-- ============================================================ -->
+<h2 id="overlays">6. Watermark, Address &amp; "Private &amp; Confidential" / 水印 / 地址 / 法律文字</h2>
+
+<div class="lang-en">
+<p>Each photo automatically includes:</p>
+<ul>
+  <li>A <b>tiled "Wai Hong Brothers Sdn Bhd" watermark</b> across the photo (in white). Adjust opacity via the <b>Watermark opacity</b> slider below the photo.</li>
+  <li>The <b>Site Address</b> as bold white text with a black outline. Drag it to any corner.</li>
+  <li>The <b>"Private and Confidential"</b> notice. Drag and resize as needed.</li>
+</ul>
+<p>To move or resize address / "Private and Confidential":</p>
+<ol>
+  <li>Tap <b>✋ Select</b> on the dock.</li>
+  <li>Tap the text on the photo.</li>
+  <li>Drag the centre to move; drag corners to resize.</li>
+</ol>
+</div>
+
+<div class="lang-cn">
+<p>每张照片自动包含：</p>
+<ul>
+  <li><b>满屏 "Wai Hong Brothers Sdn Bhd" 水印</b>（白色）。下方有 <b>Watermark opacity</b> slider 调透明度。</li>
+  <li><b>Site Address</b>：白字黑边粗体。可拖到任何角落。</li>
+  <li><b>"Private and Confidential"</b> 法律文字。可移动 + 缩放。</li>
+</ul>
+<p>要移动/缩放 address 或法律文字：</p>
+<ol>
+  <li>Dock 切到 <b>✋ Select</b>。</li>
+  <li>点中文字。</li>
+  <li>拖中央 = 移动；拖角落 = 缩放。</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 7: OUTPUT -->
+<!-- ============================================================ -->
+<h2 id="output">7. Output / 输出</h2>
+
+<div class="lang-en">
+<ul>
+  <li><b>Single photo</b> → downloads <code>PSTC 1 - JOHN 0452.jpg</code> directly.</li>
+  <li><b>Multiple photos</b> → downloads <code>PSTC - JOHN 0452.zip</code> containing one JPG per photo.</li>
+  <li>Output resolution preserves the original photo quality (up to 3× the canvas resolution for sharpness).</li>
+</ul>
+
+<div class="warn">
+  <b>Save the output to NAS</b> following the existing folder structure (refer to Project Team SOP page 60). Do NOT email the JPG / ZIP directly without saving a copy.
+</div>
+</div>
+
+<div class="lang-cn">
+<ul>
+  <li><b>单张</b> → 直接下载 <code>PSTC 1 - JOHN 0452.jpg</code>。</li>
+  <li><b>多张</b> → 下载 <code>PSTC - JOHN 0452.zip</code>，里面一张照片一个 JPG。</li>
+  <li>输出会保留原照片的清晰度（最高 3× canvas 分辨率）。</li>
+</ul>
+
+<div class="warn">
+  <b>请保存到 NAS</b>，按现有资料夹结构存档（参考 Project Team SOP page 60）。不可直接发邮件 / WhatsApp 给客户而没保存。
+</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 8: FAQ -->
+<!-- ============================================================ -->
+<h2 id="faq">8. FAQ / 常见问题</h2>
+
+<div class="lang-en">
+<h3>Q: I drew the wrong shape. How to remove?</h3>
+<p>Tap <b>↶ Undo</b> on the dock to remove the latest shape. Or use <b>✋ Select</b> → tap the shape → <b>✕ Delete Selected</b>.</p>
+
+<h3>Q: I selected the wrong Part — wrong colour applied.</h3>
+<p>Tap the Part chip on the dock → pick the right one → continue drawing. Earlier shapes drawn with the wrong colour can be deleted via Select.</p>
+
+<h3>Q: My image is blurry after generating.</h3>
+<p>Make sure you uploaded a high-resolution photo. The tool preserves the original photo's resolution. If your phone camera saved a small file, output will also be small.</p>
+
+<h3>Q: Can I save my progress and come back later?</h3>
+<p>No — the tool doesn't save state. Finish all photos in one session and tap <b>Generate Images</b> before closing the browser tab.</p>
+
+<h3>Q: Where do I save the generated images?</h3>
+<p>Save to NAS following existing project folder structure (refer to Project Team SOP page 60 / Synology Drive).</p>
+
+<h3>Q: My iPad is slow when uploading 10+ photos.</h3>
+<p>Try splitting into smaller batches (e.g. 5 photos at a time). Generate, save, then start a new batch.</p>
+
+<h3>Q: Can I print the manual?</h3>
+<p>Yes — open this manual in Safari → Share → Print. Or save as PDF.</p>
+</div>
+
+<div class="lang-cn">
+<h3>Q：画错了怎么删？</h3>
+<p>Dock 点 <b>↶ Undo</b> 撤销最近一笔。或用 <b>✋ Select</b> → 点中那个图形 → <b>✕ Delete Selected</b>。</p>
+
+<h3>Q：选错 Part 用错颜色了？</h3>
+<p>点 dock 上的 Part chip → 重选 → 继续画。之前用错色的图形用 Select 删了重画。</p>
+
+<h3>Q：生成的 image 模糊？</h3>
+<p>确保上传的照片清晰。工具会按原图分辨率输出。如果手机拍照是低画质，输出也会模糊。</p>
+
+<h3>Q：可以中途存档晚点继续吗？</h3>
+<p>不行 — 工具不存档。一次性画完所有照片，按 <b>Generate Images</b> 后再关 browser。</p>
+
+<h3>Q：生成后保存去哪？</h3>
+<p>按现有 NAS 资料夹结构存（参考 Project Team SOP page 60 / Synology Drive）。</p>
+
+<h3>Q：iPad 上传 10+ 张照片很慢？</h3>
+<p>分批上传（一次 5 张），生成保存后再开新一批。</p>
+
+<h3>Q：手册可以列印吗？</h3>
+<p>可以 — Safari 开手册 → Share → Print。或存成 PDF。</p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 9: HELP -->
+<!-- ============================================================ -->
+<h2 id="help">9. Need Help? / 需要协助？</h2>
+
+<div class="lang-en">
+<p>If you encounter a bug or have a feature request, message <b>Lychee (COO Office)</b>. Include:</p>
+<ul>
+  <li>What device you were using (iPad / iPhone / PC).</li>
+  <li>What you were trying to do.</li>
+  <li>What happened (or didn't).</li>
+  <li>Screenshot if possible.</li>
+</ul>
+</div>
+
+<div class="lang-cn">
+<p>遇到 bug 或需要新功能 → 找 <b>Lychee（COO Office）</b>。请提供：</p>
+<ul>
+  <li>用什么 device（iPad / iPhone / PC）。</li>
+  <li>当时在做什么。</li>
+  <li>结果怎样（出现什么错 / 没反应）。</li>
+  <li>有截图最好。</li>
+</ul>
+</div>
+
+<div class="footer">
+  Wai Hong Brothers Sdn Bhd · Maintained by COO Office
+</div>
+
+</div>
+
+<script>
+  function setLang(lang) {
+    if (lang === 'cn') {
+      document.body.classList.add('lang-cn-active');
+      document.getElementById('btn-cn').classList.add('active');
+      document.getElementById('btn-en').classList.remove('active');
+    } else {
+      document.body.classList.remove('lang-cn-active');
+      document.getElementById('btn-en').classList.add('active');
+      document.getElementById('btn-cn').classList.remove('active');
+    }
+    // Save preference
+    try { localStorage.setItem('whb_manual_lang', lang); } catch (e) {}
+  }
+  // Restore preference on load
+  try {
+    const saved = localStorage.getItem('whb_manual_lang');
+    if (saved === 'cn') setLang('cn');
+  } catch (e) {}
+</script>
+
+</body>
+</html>
