@@ -9,7 +9,7 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
-    padding: 16px;
+    padding: 16px 16px 100px 16px; /* extra bottom padding for floating FAB */
     background: #f0f2f5;
     color: #222;
   }
@@ -117,18 +117,108 @@
     background: #333;
     padding: 8px;
     border-radius: 4px;
-    overflow: auto;
     max-width: 100%;
+    position: relative;
   }
   canvas { display: block; max-width: 100%; touch-action: none; }
 
-  .canvas-zoom {
+  /* Floating dock — small overlay on canvas with most-used tools */
+  .floating-dock {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 12px;
+    padding: 6px;
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+    z-index: 50;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
   }
-  .canvas-zoom button { background: #607d8b; min-width: 56px; }
+  .dock-tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+  .dock-actions-row {
+    display: flex;
+    gap: 3px;
+  }
+  .dock-actions-row .dock-btn { flex: 1; min-width: 0; }
+  .dock-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 18px;
+    background: #f0f0f0;
+    color: #222;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .dock-btn.active { background: #ff7043; color: white; }
+  .dock-divider { height: 1px; background: #ddd; margin: 2px 0; }
+  .dock-part-chip {
+    background: #f0f0f0; color: #222;
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px; border-radius: 6px;
+    min-height: 44px; width: 100%;
+    font-size: 11px; font-weight: 600;
+    text-align: left;
+  }
+  .chip-swatch {
+    display: inline-block; width: 24px; height: 24px;
+    border-radius: 4px; border: 2px solid #000; flex-shrink: 0;
+  }
+  .chip-name { line-height: 1.1; max-width: 80px; }
+  .dock-zoom-level {
+    font-size: 12px; padding: 4px 0; min-height: 30px;
+    background: #e8e8e8; color: #444;
+  }
+
+  /* Part picker modal — opens when chip is tapped */
+  .part-modal-backdrop {
+    display: none;
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .part-modal-backdrop.show { display: flex; }
+  .part-modal {
+    background: white; padding: 16px;
+    border-radius: 10px;
+    max-width: 92%; max-height: 92%; overflow: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .part-modal-title {
+    font-size: 15px; font-weight: 600;
+    margin-bottom: 10px; color: #333;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .part-modal .parts-grid { width: auto; }
+  .part-modal-close {
+    background: #888; min-width: 36px; min-height: 36px;
+    padding: 0; font-size: 16px;
+  }
+
+  .canvas-zoom { display: none; } /* legacy zoom buttons hidden — dock handles it */
+
+  .floating-poly {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 60;
+  }
+  .floating-poly .finish-poly,
+  .floating-poly .cancel-poly {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
 
   .status {
     font-size: 12px;
@@ -142,8 +232,38 @@
     margin-top: 4px;
   }
 
-  #exportSection { text-align: center; }
-  .progress { font-size: 13px; color: #666; margin-top: 8px; }
+  /* Generate Images = floating FAB at bottom-right of viewport, always visible */
+  #exportSection {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 200;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    text-align: right;
+  }
+  #exportSection h2 { display: none; }
+  #exportSection #generateBtn {
+    border-radius: 30px;
+    font-size: 15px;
+    padding: 14px 22px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .progress {
+    font-size: 13px;
+    color: #222;
+    background: rgba(255,255,255,0.95);
+    padding: 6px 12px;
+    border-radius: 16px;
+    margin-top: 8px;
+    display: inline-block;
+    max-width: 70vw;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .progress:empty { display: none; }
 </style>
 </head>
 <body>
@@ -206,7 +326,7 @@ const PARTS = [
   { name: 'Down Pipe',    color: '#0F3FF3' },
   { name: 'Water Tank',   color: '#27D7FF' },
   { name: 'Bathroom',     color: '#27D7FF' },
-  { name: 'Roof',         color: '#FF27E7' },
+  { name: 'Roof Replacement', color: '#FF27E7' },
   { name: 'PU Injection', color: '#FF27E7' },
   { name: 'PU Coat',      color: '#FF27E7' },
   { name: 'Others',       color: '#9200A2' },
@@ -315,56 +435,87 @@ function buildEditorDOM(idx) {
     <div class="addr-row">
       <input type="text" class="addr-input" placeholder="Site Address (e.g. 15, JALAN IMPIAN INDAH 9)">
     </div>
+    <!-- Hidden source-of-truth toolbar buttons: dock UI controls these via .click() -->
+    <div class="toolbar-hidden" style="display:none;">
+      <div class="tools-grid">
+        <button class="tool-btn" data-tool="rectangle">Rectangle</button>
+        <button class="tool-btn" data-tool="polygon">Polygon</button>
+        <button class="tool-btn" data-tool="line">Line</button>
+        <button class="tool-btn" data-tool="freehand">Freehand</button>
+        <button class="tool-btn" data-tool="text">Text</button>
+        <button class="tool-btn" data-tool="select">Select</button>
+      </div>
+    </div>
     <div class="toolbar">
-      <div class="tool-group">
-        <div class="label">Part (auto-color)</div>
-        <div class="parts-grid"></div>
-      </div>
-      <div class="tool-group">
-        <div class="label">Tool</div>
-        <div class="tools-grid">
-          <button class="tool-btn" data-tool="rectangle">▭ Rectangle</button>
-          <button class="tool-btn" data-tool="polygon">⬠ Polygon</button>
-          <button class="tool-btn" data-tool="line">／ Line</button>
-          <button class="tool-btn" data-tool="text">A Number / Text</button>
-          <button class="tool-btn" data-tool="select">✋ Select</button>
-        </div>
-        <div class="status poly-status"></div>
-      </div>
       <div class="tool-group">
         <div class="label">Controls</div>
         <div class="controls-grid">
           <label>Line weight: <input type="range" class="weight-slider" min="2" max="20" value="6"><span class="weight-val">6</span>px</label>
           <label>Font size: <input type="range" class="font-slider" min="14" max="80" value="36"><span class="font-val">36</span>px</label>
+          <label>Watermark opacity: <input type="range" class="wm-slider" min="0" max="100" value="40"><span class="wm-val">40</span>%</label>
           <div class="actions">
-            <button class="secondary undo-btn">↶ Undo</button>
             <button class="secondary delete-btn">✕ Delete Selected</button>
             <button class="danger clear-btn">Clear All</button>
           </div>
         </div>
       </div>
     </div>
-    <div class="canvas-wrap"><canvas></canvas></div>
+    <div class="canvas-wrap">
+      <canvas></canvas>
+      <div class="poly-status floating-poly"></div>
+      <div class="floating-dock">
+        <div class="dock-tools-grid">
+          <button class="dock-btn dock-tool" data-dock-tool="rectangle" title="Rectangle">▭</button>
+          <button class="dock-btn dock-tool" data-dock-tool="polygon"   title="Polygon">⬠</button>
+          <button class="dock-btn dock-tool" data-dock-tool="line"      title="Line">／</button>
+          <button class="dock-btn dock-tool" data-dock-tool="freehand"  title="Freehand">✏️</button>
+          <button class="dock-btn dock-tool" data-dock-tool="text"      title="Number / Text">A</button>
+          <button class="dock-btn dock-tool" data-dock-tool="select"    title="Select / Move">✋</button>
+        </div>
+        <div class="dock-divider"></div>
+        <button class="dock-part-chip" title="Change Part">
+          <span class="chip-swatch"></span>
+          <span class="chip-name">—</span>
+        </button>
+        <div class="dock-divider"></div>
+        <div class="dock-actions-row">
+          <button class="dock-btn dock-undo"      title="Undo">↶</button>
+          <button class="dock-btn dock-zoom-in"   title="Zoom In">＋</button>
+          <button class="dock-btn dock-zoom-out"  title="Zoom Out">−</button>
+        </div>
+        <button class="dock-btn dock-zoom-level" title="Reset Zoom (100%)">100%</button>
+      </div>
+      <div class="part-modal-backdrop">
+        <div class="part-modal">
+          <div class="part-modal-title">
+            <span>Pick a Part</span>
+            <button class="part-modal-close">✕</button>
+          </div>
+          <div class="parts-grid"></div>
+        </div>
+      </div>
+    </div>
     <div class="canvas-zoom">
       <button class="zoom-btn" data-zoom="in">🔍 +</button>
       <button class="zoom-btn" data-zoom="out">🔍 −</button>
       <button class="zoom-btn" data-zoom="reset">Reset Zoom</button>
       <span class="zoom-level" style="align-self:center; color:#666; font-size:13px;">100%</span>
     </div>
-    <p class="help">Tip: Pick a Part first → choose Tool → drag/click on photo. Polygon: click points, click "✓ Finish" to close. In <b>Select</b> mode you can drag/resize the logo box and the watermark. Use Zoom to draw precisely.</p>
+    <p class="help">Tip: Use the floating dock on the photo to pick Tool / Part / Undo / Zoom. <b>Freehand</b> = Apple Pencil. <b>Polygon</b> = click points → "✓ Finish". <b>Pinch with 2 fingers</b> on the photo to zoom. In <b>Select</b> mode drag/resize the address and the "Private and Confidential" watermark.</p>
   `;
   document.getElementById('photos').appendChild(wrap);
 
-  // Build parts grid
-  const partsGrid = wrap.querySelector('.parts-grid');
-  PARTS.forEach((p, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'part-btn';
-    btn.style.background = p.color;
-    btn.style.color = isLightColor(p.color) ? '#000' : '#fff';
-    btn.textContent = p.name;
-    btn.dataset.idx = i;
-    partsGrid.appendChild(btn);
+  // Build all parts-grid containers (modal grid). Buttons share data-idx so click sync works.
+  wrap.querySelectorAll('.parts-grid').forEach(grid => {
+    PARTS.forEach((p, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'part-btn';
+      btn.style.background = p.color;
+      btn.style.color = isLightColor(p.color) ? '#000' : '#fff';
+      btn.textContent = p.name;
+      btn.dataset.idx = i;
+      grid.appendChild(btn);
+    });
   });
 }
 
@@ -418,24 +569,33 @@ function initFabricForPhoto(idx, dataUrl) {
       addOverlays(state);
       attachToolbar(state, wrap);
       attachCanvasEvents(state);
-      // Default-select first Part button
-      wrap.querySelectorAll('.part-btn')[0].classList.add('active');
-      // Default-select Select tool button
-      wrap.querySelector('[data-tool="select"]').classList.add('active');
+      // Default selections — programmatic clicks so all sync logic runs (chip, dock, etc.)
+      const firstPartBtn = wrap.querySelector('.part-btn[data-idx="0"]');
+      if (firstPartBtn) firstPartBtn.click();
+      const selectToolBtn = wrap.querySelector('.tool-btn[data-tool="select"]');
+      if (selectToolBtn) selectToolBtn.click();
+      // Close any modal that may have opened during init
+      const m = wrap.querySelector('.part-modal-backdrop');
+      if (m) m.classList.remove('show');
       resolve();
     });
   });
 }
 
 // ============================================================
-// OVERLAYS: address, logo, watermark
+// OVERLAYS: tiled WHB watermark + address + Private/Confidential
 // ============================================================
 function addOverlays(state) {
   const fc = state.fc;
   const w = fc.width;
   const h = fc.height;
 
-  // Watermark — top center, semi-transparent red. User can move + resize in Select mode.
+  // 1) Tiled WHB watermark — full-canvas diagonal, white, locked behind user shapes
+  const tiledWm = buildTiledWatermark(w, h, 0.4);
+  fc.add(tiledWm);
+  state.tiledWatermark = tiledWm;
+
+  // 2) Private and Confidential textbox — moveable + resizable
   const wm = new fabric.Textbox(WATERMARK_TEXT, {
     left: w / 2,
     top: 12,
@@ -456,110 +616,60 @@ function addOverlays(state) {
   fc.add(wm);
   state.watermarkObj = wm;
 
-  // Logo + Address group — bottom center with white background
-  if (logoImg) {
-    const logoClone = fabric.util.object.clone(logoImg);
-    const logoTargetW = Math.min(260, w * 0.22);
-    const logoScale = logoTargetW / logoImg.width;
-    logoClone.scale(logoScale);
-    const logoH = logoImg.height * logoScale;
-
-    // Address text (placeholder)
-    const addrText = new fabric.Text('SITE ADDRESS', {
-      fontSize: Math.max(20, w / 50),
-      fontWeight: 'bold',
-      fontFamily: 'Arial',
-      fill: '#000',
-      originX: 'center',
-      originY: 'top',
-    });
-
-    // White background box sized to fit both
-    const boxPad = 12;
-    const boxW = Math.max(logoTargetW, addrText.width) + boxPad * 2;
-    const boxH = addrText.height + 6 + logoH + boxPad * 2;
-    const bg = new fabric.Rect({
-      width: boxW,
-      height: boxH,
-      fill: 'white',
-      originX: 'center',
-      originY: 'top',
-      left: 0,
-      top: 0,
-    });
-
-    addrText.set({ left: 0, top: boxPad });
-    logoClone.set({
-      originX: 'center',
-      originY: 'top',
-      left: 0,
-      top: boxPad + addrText.height + 6,
-    });
-
-    const grp = new fabric.Group([bg, addrText, logoClone], {
-      left: w / 2,
-      top: h - boxH - 16,
-      originX: 'center',
-      originY: 'top',
-      selectable: true,
-      hasControls: true,
-      hoverCursor: 'move',
-      lockRotation: true,
-    });
-    fc.add(grp);
-    state.logoGroup = grp;
-    state.addressObj = addrText;
-  }
+  // 3) Address — standalone bold white-with-black-outline text, draggable + resizable
+  const addrText = new fabric.Text('SITE ADDRESS', {
+    left: 24,
+    top: 24,
+    fontSize: Math.max(28, w / 35),
+    fontFamily: 'Arial',
+    fontWeight: 'bold',
+    fill: '#ffffff',
+    stroke: '#000000',
+    strokeWidth: 2,
+    paintFirst: 'stroke',
+    selectable: true,
+    hasControls: true,
+    lockRotation: true,
+    hoverCursor: 'move',
+  });
+  fc.add(addrText);
+  state.addressObj = addrText;
 
   fc.requestRenderAll();
 }
 
+function buildTiledWatermark(w, h, opacity) {
+  // Spec from existing watermark tool: fontSize 10, angle -30, dx 150, dy 100
+  const text = 'Wai Hong Brothers Sdn Bhd';
+  const fontSize = 10;
+  const angle = -30;
+  const dx = 150;
+  const dy = 100;
+  const items = [];
+  for (let y = -h * 0.2; y < h * 1.2; y += dy) {
+    for (let x = -w * 0.2; x < w * 1.2; x += dx) {
+      items.push(new fabric.Text(text, {
+        left: x,
+        top: y,
+        fontSize,
+        fill: '#ffffff',
+        fontFamily: 'Arial',
+        fontWeight: 'normal',
+        angle,
+      }));
+    }
+  }
+  return new fabric.Group(items, {
+    selectable: false,
+    evented: false,
+    opacity,
+  });
+}
+
 function updateAddress(state, newText) {
-  if (!state.logoGroup || !state.addressObj) return;
+  if (!state.addressObj) return;
   const display = (newText || 'SITE ADDRESS').toUpperCase();
-  // Recreate group with updated text (Fabric groups don't easily allow text edit in place)
-  const grp = state.logoGroup;
-  const oldLeft = grp.left, oldTop = grp.top;
-  state.fc.remove(grp);
-
-  // Rebuild address+logo group
-  const w = state.fc.width;
-  const logoClone = fabric.util.object.clone(logoImg);
-  const logoTargetW = Math.min(260, w * 0.22);
-  const logoScale = logoTargetW / logoImg.width;
-  logoClone.scale(logoScale);
-  const logoH = logoImg.height * logoScale;
-
-  const addrText = new fabric.Text(display, {
-    fontSize: Math.max(20, w / 50),
-    fontWeight: 'bold',
-    fontFamily: 'Arial',
-    fill: '#000',
-    originX: 'center',
-    originY: 'top',
-  });
-  const boxPad = 12;
-  const boxW = Math.max(logoTargetW, addrText.width) + boxPad * 2;
-  const boxH = addrText.height + 6 + logoH + boxPad * 2;
-  const bg = new fabric.Rect({
-    width: boxW, height: boxH, fill: 'white',
-    originX: 'center', originY: 'top', left: 0, top: 0,
-  });
-  addrText.set({ left: 0, top: boxPad });
-  logoClone.set({
-    originX: 'center', originY: 'top',
-    left: 0, top: boxPad + addrText.height + 6,
-  });
-  const newGrp = new fabric.Group([bg, addrText, logoClone], {
-    left: oldLeft, top: oldTop,
-    originX: 'center', originY: 'top',
-    selectable: true, hasControls: true, hoverCursor: 'move',
-    lockRotation: true,
-    scaleX: grp.scaleX, scaleY: grp.scaleY, // preserve user's resize
-  });
-  state.fc.add(newGrp);
-  state.logoGroup = newGrp;
-  state.addressObj = addrText;
+  state.addressObj.set({ text: display });
   state.fc.requestRenderAll();
 }
 
@@ -571,32 +681,100 @@ function attachToolbar(state, wrap) {
   const addrInput = wrap.querySelector('.addr-input');
   addrInput.addEventListener('input', () => updateAddress(state, addrInput.value));
 
-  // Part buttons
+  // Part buttons (works for any .part-btn — toolbar or modal)
+  const updatePartChip = () => {
+    const swatch = wrap.querySelector('.chip-swatch');
+    const name = wrap.querySelector('.chip-name');
+    if (swatch && state.currentPart) {
+      swatch.style.background = state.currentPart.color;
+      name.textContent = state.currentPart.name;
+    }
+  };
   wrap.querySelectorAll('.part-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
       wrap.querySelectorAll('.part-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.currentPart = PARTS[parseInt(btn.dataset.idx)];
+      // Sync active state across all .part-btn with same idx (in case there are multiple grids)
+      wrap.querySelectorAll(`.part-btn[data-idx="${idx}"]`).forEach(b => b.classList.add('active'));
+      state.currentPart = PARTS[parseInt(idx)];
+      if (state.currentTool === 'freehand' && state.fc.freeDrawingBrush) {
+        state.fc.freeDrawingBrush.color = state.currentPart.color;
+      }
+      updatePartChip();
+      // Close part modal if it was open
+      const modal = wrap.querySelector('.part-modal-backdrop');
+      if (modal) modal.classList.remove('show');
     });
   });
+  // Initial chip render
+  updatePartChip();
 
-  // Tool buttons
+  // Tool buttons (hidden source-of-truth — dock buttons trigger these)
   wrap.querySelectorAll('.tool-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       wrap.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.currentTool = btn.dataset.tool;
+      // Sync dock tool buttons
+      wrap.querySelectorAll('.dock-tool').forEach(b => b.classList.remove('active'));
+      const dockBtn = wrap.querySelector(`.dock-tool[data-dock-tool="${state.currentTool}"]`);
+      if (dockBtn) dockBtn.classList.add('active');
       // Reset polygon state when switching away from polygon
       cancelPolygon(state);
       // Toggle canvas selection mode
       state.fc.selection = (state.currentTool === 'select');
       state.fc.skipTargetFind = (state.currentTool !== 'select');
+      // Freehand uses Fabric's built-in drawing mode
+      if (state.currentTool === 'freehand') {
+        state.fc.isDrawingMode = true;
+        state.fc.freeDrawingBrush.color = state.currentPart.color;
+        state.fc.freeDrawingBrush.width = state.lineWeight;
+      } else {
+        state.fc.isDrawingMode = false;
+      }
       // Cursor
       const c = state.currentTool === 'select' ? 'default' :
-                state.currentTool === 'text' ? 'text' : 'crosshair';
+                state.currentTool === 'text' ? 'text' :
+                state.currentTool === 'freehand' ? 'crosshair' : 'crosshair';
       state.fc.defaultCursor = c;
       state.fc.hoverCursor = c;
     });
+  });
+
+  // Dock tool buttons → trigger underlying .tool-btn
+  wrap.querySelectorAll('.dock-tool').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tool = btn.dataset.dockTool;
+      const orig = wrap.querySelector(`.tool-btn[data-tool="${tool}"]`);
+      if (orig) orig.click();
+    });
+  });
+
+  // Dock part chip → open modal
+  const modal = wrap.querySelector('.part-modal-backdrop');
+  wrap.querySelector('.dock-part-chip').addEventListener('click', (e) => {
+    e.stopPropagation();
+    modal.classList.add('show');
+  });
+  wrap.querySelector('.part-modal-close').addEventListener('click', () => {
+    modal.classList.remove('show');
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('show');
+  });
+
+  // Dock undo + zoom
+  wrap.querySelector('.dock-undo').addEventListener('click', () => {
+    undo(state);
+  });
+  wrap.querySelector('.dock-zoom-in').addEventListener('click', () => {
+    wrap.querySelector('.zoom-btn[data-zoom="in"]').click();
+  });
+  wrap.querySelector('.dock-zoom-out').addEventListener('click', () => {
+    wrap.querySelector('.zoom-btn[data-zoom="out"]').click();
+  });
+  wrap.querySelector('.dock-zoom-level').addEventListener('click', () => {
+    wrap.querySelector('.zoom-btn[data-zoom="reset"]').click();
   });
 
   // Sliders
@@ -605,6 +783,9 @@ function attachToolbar(state, wrap) {
   wSlider.addEventListener('input', () => {
     state.lineWeight = parseInt(wSlider.value);
     wVal.textContent = state.lineWeight;
+    if (state.currentTool === 'freehand' && state.fc.freeDrawingBrush) {
+      state.fc.freeDrawingBrush.width = state.lineWeight;
+    }
   });
   const fSlider = wrap.querySelector('.font-slider');
   const fVal = wrap.querySelector('.font-val');
@@ -612,20 +793,31 @@ function attachToolbar(state, wrap) {
     state.fontSize = parseInt(fSlider.value);
     fVal.textContent = state.fontSize;
   });
+  const wmSlider = wrap.querySelector('.wm-slider');
+  const wmValEl = wrap.querySelector('.wm-val');
+  wmSlider.addEventListener('input', () => {
+    const v = parseInt(wmSlider.value);
+    wmValEl.textContent = v;
+    if (state.tiledWatermark) {
+      state.tiledWatermark.set({ opacity: v / 100 });
+      state.fc.requestRenderAll();
+    }
+  });
 
-  // Undo / Delete / Clear
-  wrap.querySelector('.undo-btn').addEventListener('click', () => undo(state));
+  // Delete / Clear (Undo lives on the dock now)
   wrap.querySelector('.delete-btn').addEventListener('click', () => deleteSelected(state));
   wrap.querySelector('.clear-btn').addEventListener('click', () => clearAll(state));
 
   // Zoom
-  const zoomLabel = wrap.querySelector('.zoom-level');
+  const updateZoomLabel = (pct) => {
+    const txt = pct + '%';
+    wrap.querySelectorAll('.zoom-level, .dock-zoom-level').forEach(el => el.textContent = txt);
+  };
   const setZoom = (z) => {
-    z = Math.max(0.5, Math.min(4, z));
-    // Zoom toward center of viewport
+    z = Math.max(0.5, Math.min(5, z));
     const center = { x: state.fc.width / 2, y: state.fc.height / 2 };
     state.fc.zoomToPoint(center, z);
-    zoomLabel.textContent = Math.round(z * 100) + '%';
+    updateZoomLabel(Math.round(z * 100));
   };
   wrap.querySelectorAll('.zoom-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -633,9 +825,11 @@ function attachToolbar(state, wrap) {
       const cur = state.fc.getZoom();
       if (action === 'in') setZoom(cur * 1.25);
       else if (action === 'out') setZoom(cur / 1.25);
-      else { state.fc.setViewportTransform([1, 0, 0, 1, 0, 0]); zoomLabel.textContent = '100%'; }
+      else { state.fc.setViewportTransform([1, 0, 0, 1, 0, 0]); updateZoomLabel(100); }
     });
   });
+  // Expose for pinch handler
+  state._updateZoomLabel = updateZoomLabel;
 }
 
 // ============================================================
@@ -742,6 +936,85 @@ function attachCanvasEvents(state) {
       state.isDrawing = false;
       bringOverlaysToFront(state);
       state.fc.requestRenderAll();
+    }
+  });
+
+  // Freehand strokes — capture each finished path for undo
+  fc.on('path:created', (opt) => {
+    if (opt.path) {
+      opt.path._userShape = true;
+      opt.path.selectable = false;
+      state.undoStack.push(opt.path);
+      bringOverlaysToFront(state);
+    }
+  });
+
+  // Pinch-to-zoom (two-finger gesture on touch devices)
+  attachPinchZoom(state);
+}
+
+// ============================================================
+// PINCH-TO-ZOOM (iPad-friendly)
+// ============================================================
+function attachPinchZoom(state) {
+  const fc = state.fc;
+  const upper = fc.upperCanvasEl;
+  let pinch = null;
+  const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const mid  = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+
+  upper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      // Cancel any in-progress draw / freehand stroke
+      if (state.isDrawing && state.tempShape) {
+        fc.remove(state.tempShape);
+        state.tempShape = null;
+        state.isDrawing = false;
+      }
+      pinch = {
+        d0: dist(e.touches[0], e.touches[1]),
+        z0: fc.getZoom(),
+        m0: mid(e.touches[0], e.touches[1]),
+        vt0: fc.viewportTransform.slice(),
+        wasDrawing: fc.isDrawingMode,
+      };
+      fc.isDrawingMode = false;
+    }
+  }, { passive: false });
+
+  upper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && pinch) {
+      e.preventDefault();
+      const newDist = dist(e.touches[0], e.touches[1]);
+      const newMid = mid(e.touches[0], e.touches[1]);
+      const ratio = newDist / pinch.d0;
+      const z = Math.max(0.5, Math.min(5, pinch.z0 * ratio));
+      const rect = upper.getBoundingClientRect();
+      // Convert client (CSS) pixels to canvas internal coordinates
+      const sx = fc.width / rect.width;
+      const sy = fc.height / rect.height;
+      // Reset to pre-pinch viewport, then zoom around initial midpoint, then pan by midpoint delta
+      fc.setViewportTransform(pinch.vt0.slice());
+      fc.zoomToPoint({
+        x: (pinch.m0.x - rect.left) * sx,
+        y: (pinch.m0.y - rect.top) * sy,
+      }, z);
+      fc.relativePan({
+        x: (newMid.x - pinch.m0.x) * sx,
+        y: (newMid.y - pinch.m0.y) * sy,
+      });
+      if (state._updateZoomLabel) state._updateZoomLabel(Math.round(z * 100));
+    }
+  }, { passive: false });
+
+  upper.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2 && pinch) {
+      // Restore freehand mode if it was active before the pinch
+      if (pinch.wasDrawing && state.currentTool === 'freehand') {
+        fc.isDrawingMode = true;
+      }
+      pinch = null;
     }
   });
 }
@@ -864,8 +1137,15 @@ function clearAll(state) {
 }
 
 function bringOverlaysToFront(state) {
+  // Background image stays at the very back; tiled watermark sits just above it.
+  if (state.bgImg) state.fc.sendToBack(state.bgImg);
+  if (state.tiledWatermark) {
+    state.fc.sendToBack(state.tiledWatermark);
+    state.fc.sendToBack(state.bgImg); // keep bg below watermark
+  }
+  // These stay on top of user shapes
   if (state.watermarkObj) state.fc.bringToFront(state.watermarkObj);
-  if (state.logoGroup) state.fc.bringToFront(state.logoGroup);
+  if (state.addressObj) state.fc.bringToFront(state.addressObj);
 }
 
 // ============================================================
@@ -910,16 +1190,33 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     const images = []; // { name, blob }
     for (let i = 0; i < photos.length; i++) {
       const state = photos[i];
+      const fc = state.fc;
+
       // Deselect any active object so selection handles aren't rendered
-      state.fc.discardActiveObject();
-      state.fc.requestRenderAll();
+      fc.discardActiveObject();
+
+      // Reset viewport so the entire canvas is captured (user may have zoomed/panned)
+      const savedVt = fc.viewportTransform.slice();
+      fc.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      fc.requestRenderAll();
       await new Promise(r => setTimeout(r, 30));
 
-      const dataUrl = state.fc.toDataURL({
+      // Render at the original photo's resolution so the output is sharp.
+      // bgImg.width is the source photo's natural width (set before fabric scaled it down).
+      const originalW = state.bgImg.width;
+      const canvasW = fc.width;
+      const multiplier = Math.max(1, Math.min(3, originalW / canvasW));
+
+      const dataUrl = fc.toDataURL({
         format: 'jpeg',
         quality: 0.92,
-        multiplier: 1,
+        multiplier,
       });
+
+      // Restore the user's view
+      fc.setViewportTransform(savedVt);
+      fc.requestRenderAll();
+
       const blob = await (await fetch(dataUrl)).blob();
       const filename = `PSTC ${i + 1} - ${custName} ${custPhone}.jpg`;
       images.push({ name: filename, blob });
