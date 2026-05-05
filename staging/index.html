@@ -9,7 +9,7 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
-    padding: 16px;
+    padding: 16px 16px 100px 16px; /* extra bottom padding for floating FAB */
     background: #f0f2f5;
     color: #222;
   }
@@ -177,7 +177,8 @@
   }
   .chip-name { line-height: 1.1; max-width: 80px; }
   .dock-zoom-level {
-    font-size: 11px; color: #666; text-align: center; padding: 2px 0;
+    font-size: 12px; padding: 4px 0; min-height: 30px;
+    background: #e8e8e8; color: #444;
   }
 
   /* Part picker modal — opens when chip is tapped */
@@ -231,8 +232,38 @@
     margin-top: 4px;
   }
 
-  #exportSection { text-align: center; }
-  .progress { font-size: 13px; color: #666; margin-top: 8px; }
+  /* Generate Images = floating FAB at bottom-right of viewport, always visible */
+  #exportSection {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 200;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    text-align: right;
+  }
+  #exportSection h2 { display: none; }
+  #exportSection #generateBtn {
+    border-radius: 30px;
+    font-size: 15px;
+    padding: 14px 22px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .progress {
+    font-size: 13px;
+    color: #222;
+    background: rgba(255,255,255,0.95);
+    padding: 6px 12px;
+    border-radius: 16px;
+    margin-top: 8px;
+    display: inline-block;
+    max-width: 70vw;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .progress:empty { display: none; }
 </style>
 </head>
 <body>
@@ -452,7 +483,7 @@ function buildEditorDOM(idx) {
           <button class="dock-btn dock-zoom-in"   title="Zoom In">＋</button>
           <button class="dock-btn dock-zoom-out"  title="Zoom Out">−</button>
         </div>
-        <div class="dock-zoom-level">100%</div>
+        <button class="dock-btn dock-zoom-level" title="Reset Zoom (100%)">100%</button>
       </div>
       <div class="part-modal-backdrop">
         <div class="part-modal">
@@ -742,6 +773,9 @@ function attachToolbar(state, wrap) {
   wrap.querySelector('.dock-zoom-out').addEventListener('click', () => {
     wrap.querySelector('.zoom-btn[data-zoom="out"]').click();
   });
+  wrap.querySelector('.dock-zoom-level').addEventListener('click', () => {
+    wrap.querySelector('.zoom-btn[data-zoom="reset"]').click();
+  });
 
   // Sliders
   const wSlider = wrap.querySelector('.weight-slider');
@@ -938,11 +972,11 @@ function attachPinchZoom(state) {
         state.tempShape = null;
         state.isDrawing = false;
       }
-      // Suspend freehand drawing during pinch
       pinch = {
         d0: dist(e.touches[0], e.touches[1]),
         z0: fc.getZoom(),
         m0: mid(e.touches[0], e.touches[1]),
+        vt0: fc.viewportTransform.slice(),
         wasDrawing: fc.isDrawingMode,
       };
       fc.isDrawingMode = false;
@@ -952,13 +986,24 @@ function attachPinchZoom(state) {
   upper.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2 && pinch) {
       e.preventDefault();
-      const ratio = dist(e.touches[0], e.touches[1]) / pinch.d0;
-      let z = Math.max(0.5, Math.min(5, pinch.z0 * ratio));
+      const newDist = dist(e.touches[0], e.touches[1]);
+      const newMid = mid(e.touches[0], e.touches[1]);
+      const ratio = newDist / pinch.d0;
+      const z = Math.max(0.5, Math.min(5, pinch.z0 * ratio));
       const rect = upper.getBoundingClientRect();
+      // Convert client (CSS) pixels to canvas internal coordinates
+      const sx = fc.width / rect.width;
+      const sy = fc.height / rect.height;
+      // Reset to pre-pinch viewport, then zoom around initial midpoint, then pan by midpoint delta
+      fc.setViewportTransform(pinch.vt0.slice());
       fc.zoomToPoint({
-        x: pinch.m0.x - rect.left,
-        y: pinch.m0.y - rect.top,
+        x: (pinch.m0.x - rect.left) * sx,
+        y: (pinch.m0.y - rect.top) * sy,
       }, z);
+      fc.relativePan({
+        x: (newMid.x - pinch.m0.x) * sx,
+        y: (newMid.y - pinch.m0.y) * sy,
+      });
       if (state._updateZoomLabel) state._updateZoomLabel(Math.round(z * 100));
     }
   }, { passive: false });
@@ -1145,16 +1190,33 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
     const images = []; // { name, blob }
     for (let i = 0; i < photos.length; i++) {
       const state = photos[i];
+      const fc = state.fc;
+
       // Deselect any active object so selection handles aren't rendered
-      state.fc.discardActiveObject();
-      state.fc.requestRenderAll();
+      fc.discardActiveObject();
+
+      // Reset viewport so the entire canvas is captured (user may have zoomed/panned)
+      const savedVt = fc.viewportTransform.slice();
+      fc.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      fc.requestRenderAll();
       await new Promise(r => setTimeout(r, 30));
 
-      const dataUrl = state.fc.toDataURL({
+      // Render at the original photo's resolution so the output is sharp.
+      // bgImg.width is the source photo's natural width (set before fabric scaled it down).
+      const originalW = state.bgImg.width;
+      const canvasW = fc.width;
+      const multiplier = Math.max(1, Math.min(3, originalW / canvasW));
+
+      const dataUrl = fc.toDataURL({
         format: 'jpeg',
         quality: 0.92,
-        multiplier: 1,
+        multiplier,
       });
+
+      // Restore the user's view
+      fc.setViewportTransform(savedVt);
+      fc.requestRenderAll();
+
       const blob = await (await fetch(dataUrl)).blob();
       const filename = `PSTC ${i + 1} - ${custName} ${custPhone}.jpg`;
       images.push({ name: filename, blob });
