@@ -9,7 +9,7 @@ Web-based replacement for **PSTC (Photo Send To Customer)** preparation. Mark up
 
 ## 🔗 Live URL
 
-**`https://<your-github-username>.github.io/whb-site-photo-tool/`**
+**`https://waihongbrothers.github.io/whb-site-photo-tool/`**
 
 > Open on iPad / phone / PC. No login. No install.
 
