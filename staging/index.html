@@ -269,13 +269,27 @@
 <body>
 
 <div class="container">
-  <h1>WHB Site Photo Tool</h1>
-  <p class="subtitle">Mark up site inspection photos and generate a PSTC PDF.</p>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+    <h1>WHB Site Photo Tool</h1>
+    <a href="manual.html" target="_blank" style="background:#fff; border:1px solid #2196F3; color:#2196F3; padding:8px 14px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:600;">📖 Help / 使用手册</a>
+  </div>
+  <p class="subtitle">Mark up site inspection photos and generate PSTC images. <a href="manual.html" target="_blank" style="color:#2196F3;">Need help? Open the manual.</a></p>
 
   <div class="card">
     <h2>Step 1 — Project Info</h2>
     <input type="text" id="custName" placeholder="Customer Name (e.g. JOHN)" style="width:240px;">
     <input type="text" id="custPhone" placeholder="Phone last 4 digits (e.g. 0452)" style="width:200px;" maxlength="4">
+    <div style="margin-top:10px;">
+      <select id="wmCompanySelect" style="width:340px;">
+        <option value="Wai Hong Brothers">Wai Hong Brothers</option>
+        <option value="Wai Hong Brothers Sdn Bhd" selected>Wai Hong Brothers Sdn Bhd</option>
+        <option value="Wai Hong Roofing Sdn Bhd">Wai Hong Roofing Sdn Bhd</option>
+        <option value="Mr Roof Waterproofing Sdn Bhd">Mr Roof Waterproofing Sdn Bhd</option>
+        <option value="__others__">Others (custom)</option>
+      </select>
+      <input type="text" id="wmCompanyCustom" placeholder="Enter custom company name" style="width:340px; margin-top:6px; display:none;">
+      <p class="help">This name is tiled across every photo as the background watermark. Pick your branch's company name — the selection is remembered on this device.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -368,6 +382,81 @@ const logoPromise = new Promise((resolve) => {
 const photos = []; // { fabricCanvas, undoStack, currentPart, currentTool, lineWeight, addressObj, logoGroup, watermarkObj, polyTempPoints, polyTempLines }
 
 // ============================================================
+// WATERMARK COMPANY NAME — editable, persisted per-device
+// ============================================================
+const WM_STORAGE_KEY = 'whb_pstc_wm_company';
+const WM_DEFAULT = 'Wai Hong Brothers Sdn Bhd';
+const WM_PRESETS = [
+  'Wai Hong Brothers',
+  'Wai Hong Brothers Sdn Bhd',
+  'Wai Hong Roofing Sdn Bhd',
+  'Mr Roof Waterproofing Sdn Bhd',
+];
+
+function getWatermarkText() {
+  const sel = document.getElementById('wmCompanySelect');
+  if (!sel) return WM_DEFAULT;
+  if (sel.value === '__others__') {
+    const custom = document.getElementById('wmCompanyCustom');
+    const v = custom && custom.value ? custom.value.trim() : '';
+    return v || WM_DEFAULT;
+  }
+  return sel.value || WM_DEFAULT;
+}
+
+(function initWatermarkInput() {
+  const sel = document.getElementById('wmCompanySelect');
+  const custom = document.getElementById('wmCompanyCustom');
+  if (!sel || !custom) return;
+
+  try {
+    const saved = localStorage.getItem(WM_STORAGE_KEY);
+    if (saved && saved.trim()) {
+      if (WM_PRESETS.includes(saved)) {
+        sel.value = saved;
+        custom.style.display = 'none';
+      } else {
+        sel.value = '__others__';
+        custom.value = saved;
+        custom.style.display = '';
+      }
+    }
+  } catch (_) {}
+
+  function persistAndApply() {
+    const text = getWatermarkText();
+    try { localStorage.setItem(WM_STORAGE_KEY, text); } catch (_) {}
+    applyWatermarkToAllPhotos();
+  }
+
+  sel.addEventListener('change', () => {
+    const isOthers = sel.value === '__others__';
+    custom.style.display = isOthers ? '' : 'none';
+    if (isOthers) custom.focus();
+    persistAndApply();
+  });
+
+  let debounce;
+  custom.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(persistAndApply, 250);
+  });
+})();
+
+function applyWatermarkToAllPhotos() {
+  const text = getWatermarkText();
+  for (const state of photos) {
+    if (!state || !state.fc) continue;
+    if (state.tiledWatermark) state.fc.remove(state.tiledWatermark);
+    const newWm = buildTiledWatermark(state.fc.width, state.fc.height, 0.4, text);
+    state.fc.add(newWm);
+    state.tiledWatermark = newWm;
+    bringOverlaysToFront(state);
+    state.fc.requestRenderAll();
+  }
+}
+
+// ============================================================
 // FILE UPLOAD HANDLER
 // ============================================================
 document.getElementById('photoUpload').addEventListener('change', async (e) => {
@@ -439,7 +528,9 @@ function buildEditorDOM(idx) {
     <div class="toolbar-hidden" style="display:none;">
       <div class="tools-grid">
         <button class="tool-btn" data-tool="rectangle">Rectangle</button>
+        <button class="tool-btn" data-tool="circle">Circle</button>
         <button class="tool-btn" data-tool="polygon">Polygon</button>
+        <button class="tool-btn" data-tool="curve">Curve</button>
         <button class="tool-btn" data-tool="line">Line</button>
         <button class="tool-btn" data-tool="freehand">Freehand</button>
         <button class="tool-btn" data-tool="text">Text</button>
@@ -466,7 +557,9 @@ function buildEditorDOM(idx) {
       <div class="floating-dock">
         <div class="dock-tools-grid">
           <button class="dock-btn dock-tool" data-dock-tool="rectangle" title="Rectangle">▭</button>
+          <button class="dock-btn dock-tool" data-dock-tool="circle"    title="Circle / Ellipse">◯</button>
           <button class="dock-btn dock-tool" data-dock-tool="polygon"   title="Polygon">⬠</button>
+          <button class="dock-btn dock-tool" data-dock-tool="curve"     title="Curve (smooth)">∽</button>
           <button class="dock-btn dock-tool" data-dock-tool="line"      title="Line">／</button>
           <button class="dock-btn dock-tool" data-dock-tool="freehand"  title="Freehand">✏️</button>
           <button class="dock-btn dock-tool" data-dock-tool="text"      title="Number / Text">A</button>
@@ -479,9 +572,13 @@ function buildEditorDOM(idx) {
         </button>
         <div class="dock-divider"></div>
         <div class="dock-actions-row">
-          <button class="dock-btn dock-undo"      title="Undo">↶</button>
-          <button class="dock-btn dock-zoom-in"   title="Zoom In">＋</button>
-          <button class="dock-btn dock-zoom-out"  title="Zoom Out">−</button>
+          <button class="dock-btn dock-undo" title="Undo (Ctrl+Z)">↶</button>
+          <button class="dock-btn dock-redo" title="Redo (Ctrl+Y)">↷</button>
+          <button class="dock-btn dock-duplicate" title="Duplicate Selected (Ctrl+D)">⎘</button>
+        </div>
+        <div class="dock-actions-row">
+          <button class="dock-btn dock-zoom-in"  title="Zoom In">＋</button>
+          <button class="dock-btn dock-zoom-out" title="Zoom Out">−</button>
         </div>
         <button class="dock-btn dock-zoom-level" title="Reset Zoom (100%)">100%</button>
       </div>
@@ -551,6 +648,7 @@ function initFabricForPhoto(idx, dataUrl) {
         fc,
         bgImg: img,
         undoStack: [],
+        redoStack: [],
         currentPart: PARTS[0],
         currentTool: 'select',
         lineWeight: 6,
@@ -591,7 +689,7 @@ function addOverlays(state) {
   const h = fc.height;
 
   // 1) Tiled WHB watermark — full-canvas diagonal, white, locked behind user shapes
-  const tiledWm = buildTiledWatermark(w, h, 0.4);
+  const tiledWm = buildTiledWatermark(w, h, 0.4, getWatermarkText());
   fc.add(tiledWm);
   state.tiledWatermark = tiledWm;
 
@@ -610,7 +708,6 @@ function addOverlays(state) {
     originY: 'top',
     selectable: true,
     hasControls: true,
-    lockRotation: true,
     hoverCursor: 'move',
   });
   fc.add(wm);
@@ -629,7 +726,6 @@ function addOverlays(state) {
     paintFirst: 'stroke',
     selectable: true,
     hasControls: true,
-    lockRotation: true,
     hoverCursor: 'move',
   });
   fc.add(addrText);
@@ -638,9 +734,9 @@ function addOverlays(state) {
   fc.requestRenderAll();
 }
 
-function buildTiledWatermark(w, h, opacity) {
+function buildTiledWatermark(w, h, opacity, customText) {
   // Spec from existing watermark tool: fontSize 10, angle -30, dx 150, dy 100
-  const text = 'Wai Hong Brothers Sdn Bhd';
+  const text = (customText && customText.trim()) || 'Wai Hong Brothers Sdn Bhd';
   const fontSize = 10;
   const angle = -30;
   const dx = 150;
@@ -763,9 +859,15 @@ function attachToolbar(state, wrap) {
     if (e.target === modal) modal.classList.remove('show');
   });
 
-  // Dock undo + zoom
+  // Dock undo / redo / duplicate / zoom
   wrap.querySelector('.dock-undo').addEventListener('click', () => {
     undo(state);
+  });
+  wrap.querySelector('.dock-redo').addEventListener('click', () => {
+    redo(state);
+  });
+  wrap.querySelector('.dock-duplicate').addEventListener('click', () => {
+    duplicateSelected(state);
   });
   wrap.querySelector('.dock-zoom-in').addEventListener('click', () => {
     wrap.querySelector('.zoom-btn[data-zoom="in"]').click();
@@ -835,8 +937,14 @@ function attachToolbar(state, wrap) {
 // ============================================================
 // CANVAS DRAWING EVENTS
 // ============================================================
+let lastActivePhotoIdx = null;
+
 function attachCanvasEvents(state) {
   const fc = state.fc;
+
+  // Track which photo the user last touched, for keyboard shortcuts
+  fc.on('mouse:down', () => { lastActivePhotoIdx = state.idx; });
+  fc.upperCanvasEl.addEventListener('touchstart', () => { lastActivePhotoIdx = state.idx; }, { passive: true });
 
   fc.on('mouse:down', (opt) => {
     if (state.currentTool === 'select') return;
@@ -858,6 +966,21 @@ function attachCanvasEvents(state) {
         _userShape: true,
       });
       fc.add(state.tempShape);
+    } else if (state.currentTool === 'circle') {
+      state.isDrawing = true;
+      state.tempShape = new fabric.Ellipse({
+        left: p.x, top: p.y, rx: 1, ry: 1,
+        originX: 'left', originY: 'top',
+        fill: 'transparent',
+        stroke: state.currentPart.color,
+        strokeWidth: state.lineWeight,
+        strokeUniform: true,
+        selectable: false,
+        objectCaching: false,
+        _userShape: true,
+      });
+      state.tempShape._origin = { x: p.x, y: p.y };
+      fc.add(state.tempShape);
     } else if (state.currentTool === 'line') {
       state.isDrawing = true;
       state.tempShape = new fabric.Line([p.x, p.y, p.x, p.y], {
@@ -869,7 +992,7 @@ function attachCanvasEvents(state) {
         _userShape: true,
       });
       fc.add(state.tempShape);
-    } else if (state.currentTool === 'polygon') {
+    } else if (state.currentTool === 'polygon' || state.currentTool === 'curve') {
       addPolyPoint(state, p);
     } else if (state.currentTool === 'text') {
       const txt = prompt('Enter number or text:', '1');
@@ -888,7 +1011,7 @@ function attachCanvasEvents(state) {
           _userShape: true,
         });
         fc.add(t);
-        state.undoStack.push(t);
+        pushUndo(state, t);
         bringOverlaysToFront(state);
         fc.requestRenderAll();
       }
@@ -898,7 +1021,7 @@ function attachCanvasEvents(state) {
   fc.on('mouse:move', (opt) => {
     if (!state.isDrawing || !state.tempShape) {
       // If polygon mode and we have points, draw preview line to mouse
-      if (state.currentTool === 'polygon' && state.polyPoints.length > 0) {
+      if ((state.currentTool === 'polygon' || state.currentTool === 'curve') && state.polyPoints.length > 0) {
         updatePolyPreview(state, fc.getPointer(opt.e));
       }
       return;
@@ -915,6 +1038,26 @@ function attachCanvasEvents(state) {
         top: h < 0 ? p.y : r.top,
       });
       fc.requestRenderAll();
+    } else if (state.currentTool === 'circle') {
+      const ell = state.tempShape;
+      const o = ell._origin;
+      let dx = p.x - o.x;
+      let dy = p.y - o.y;
+      // Shift = constrain to a perfect circle (use the larger drag dimension)
+      const shift = !!(opt.e && (opt.e.shiftKey || (opt.e.touches && opt.e.touches.length === 0 && opt.e.shiftKey)));
+      if (shift) {
+        const m = Math.max(Math.abs(dx), Math.abs(dy));
+        dx = dx < 0 ? -m : m;
+        dy = dy < 0 ? -m : m;
+      }
+      ell.set({
+        left: dx < 0 ? o.x + dx : o.x,
+        top:  dy < 0 ? o.y + dy : o.y,
+        rx: Math.abs(dx) / 2,
+        ry: Math.abs(dy) / 2,
+      });
+      ell.setCoords();
+      fc.requestRenderAll();
     } else if (state.currentTool === 'line') {
       state.tempShape.set({ x2: p.x, y2: p.y });
       fc.requestRenderAll();
@@ -925,12 +1068,16 @@ function attachCanvasEvents(state) {
     if (state.isDrawing && state.tempShape) {
       // Discard tiny shapes (accidental clicks)
       const s = state.tempShape;
-      const tooSmall = (s.type === 'rect' && (s.width < 4 || s.height < 4)) ||
-                       (s.type === 'line' && Math.hypot(s.x2 - s.x1, s.y2 - s.y1) < 4);
+      const tooSmall = (s.type === 'rect'    && (s.width < 4 || s.height < 4)) ||
+                       (s.type === 'ellipse' && (s.rx < 3 || s.ry < 3)) ||
+                       (s.type === 'line'    && Math.hypot(s.x2 - s.x1, s.y2 - s.y1) < 4);
       if (tooSmall) {
         state.fc.remove(s);
       } else {
-        state.undoStack.push(s);
+        // Finalised → make it selectable so user can grab/edit/delete it later
+        s.set({ selectable: true, hasControls: true });
+        s.setCoords();
+        pushUndo(state, s);
       }
       state.tempShape = null;
       state.isDrawing = false;
@@ -943,8 +1090,9 @@ function attachCanvasEvents(state) {
   fc.on('path:created', (opt) => {
     if (opt.path) {
       opt.path._userShape = true;
-      opt.path.selectable = false;
-      state.undoStack.push(opt.path);
+      opt.path.set({ selectable: true, hasControls: true });
+      opt.path.setCoords();
+      pushUndo(state, opt.path);
       bringOverlaysToFront(state);
     }
   });
@@ -1048,8 +1196,9 @@ function addPolyPoint(state, p) {
     state.polyTemp.push(ln);
   }
 
-  // Show finish button if 3+ points
-  if (state.polyPoints.length >= 3) {
+  // Show finish button: polygon needs 3+, curve needs 2+
+  const minPts = state.currentTool === 'curve' ? 2 : 3;
+  if (state.polyPoints.length >= minPts) {
     showFinishPolyButton(state);
   }
   fc.requestRenderAll();
@@ -1063,31 +1212,71 @@ function updatePolyPreview(state, p) {
 function showFinishPolyButton(state) {
   const wrap = document.querySelector(`.photo-editor[data-idx="${state.idx}"]`);
   const status = wrap.querySelector('.poly-status');
-  status.innerHTML = `<button style="background:#43a047" class="finish-poly">✓ Finish Polygon (${state.polyPoints.length} pts)</button> <button class="danger cancel-poly">Cancel</button>`;
+  const label = state.currentTool === 'curve' ? 'Curve' : 'Polygon';
+  status.innerHTML = `<button style="background:#43a047" class="finish-poly">✓ Finish ${label} (${state.polyPoints.length} pts)</button> <button class="danger cancel-poly">Cancel</button>`;
   status.querySelector('.finish-poly').onclick = () => finishPolygon(state);
   status.querySelector('.cancel-poly').onclick = () => cancelPolygon(state);
 }
 
+function catmullRomToSvgPath(points) {
+  if (points.length < 2) return '';
+  if (points.length === 2) {
+    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+  }
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = i > 0 ? points[i - 1] : points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = i + 2 < points.length ? points[i + 2] : p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
 function finishPolygon(state) {
   const fc = state.fc;
-  if (state.polyPoints.length < 3) return;
+  const isCurve = state.currentTool === 'curve';
+  const minPts = isCurve ? 2 : 3;
+  if (state.polyPoints.length < minPts) return;
   // Remove temp dots/lines
   state.polyTemp.forEach(o => fc.remove(o));
   state.polyTemp = [];
 
-  // Build polygon
-  const poly = new fabric.Polygon(state.polyPoints.slice(), {
-    fill: 'transparent',
-    stroke: state.currentPart.color,
-    strokeWidth: state.lineWeight,
-    strokeLineJoin: 'round',
-    strokeUniform: true,
-    objectCaching: false,
-    selectable: false,
-    _userShape: true,
-  });
-  fc.add(poly);
-  state.undoStack.push(poly);
+  let shape;
+  if (isCurve) {
+    const d = catmullRomToSvgPath(state.polyPoints);
+    shape = new fabric.Path(d, {
+      fill: '',
+      stroke: state.currentPart.color,
+      strokeWidth: state.lineWeight,
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      strokeUniform: true,
+      objectCaching: false,
+      selectable: true,
+      hasControls: true,
+      _userShape: true,
+    });
+  } else {
+    shape = new fabric.Polygon(state.polyPoints.slice(), {
+      fill: 'transparent',
+      stroke: state.currentPart.color,
+      strokeWidth: state.lineWeight,
+      strokeLineJoin: 'round',
+      strokeUniform: true,
+      objectCaching: false,
+      selectable: true,
+      hasControls: true,
+      _userShape: true,
+    });
+  }
+  fc.add(shape);
+  pushUndo(state, shape);
   state.polyPoints = [];
   bringOverlaysToFront(state);
 
@@ -1107,13 +1296,62 @@ function cancelPolygon(state) {
 }
 
 // ============================================================
-// UNDO / DELETE / CLEAR
+// UNDO / REDO / DELETE / DUPLICATE / CLEAR
 // ============================================================
+function pushUndo(state, obj) {
+  state.undoStack.push(obj);
+  // Any new edit invalidates the redo history
+  state.redoStack.length = 0;
+}
+
 function undo(state) {
-  cancelPolygon(state);
+  // Polygon-in-progress: undo removes the last clicked point + its temp visuals
+  if (state.polyPoints.length > 0) {
+    state.polyPoints.pop();
+    // Remove the trailing temp objects: a connector line (if any) + the dot
+    if (state.polyTemp.length > 0) {
+      // After point N (N>=2): we appended dot then line → polyTemp tail = [..., dot, line]
+      // After point 1: we appended only the dot → polyTemp tail = [dot]
+      // Pop the line if present, then the dot.
+      const tailLine = state.polyTemp[state.polyTemp.length - 1];
+      // Heuristic: a line was added only when polyPoints (before pop) >= 2
+      // After pop, count is one less, so if state.polyPoints.length >= 1 the line existed
+      if (state.polyPoints.length >= 1) {
+        state.fc.remove(tailLine);
+        state.polyTemp.pop();
+      }
+      const dot = state.polyTemp.pop();
+      if (dot) state.fc.remove(dot);
+    }
+    // Refresh / hide the Finish button
+    const wrap = document.querySelector(`.photo-editor[data-idx="${state.idx}"]`);
+    const status = wrap && wrap.querySelector('.poly-status');
+    if (status) {
+      const minPts = state.currentTool === 'curve' ? 2 : 3;
+      if (state.polyPoints.length >= minPts) showFinishPolyButton(state);
+      else status.innerHTML = '';
+    }
+    state.fc.requestRenderAll();
+    return;
+  }
+
   const last = state.undoStack.pop();
   if (last) {
     state.fc.remove(last);
+    state.redoStack.push(last);
+    state.fc.discardActiveObject();
+    state.fc.requestRenderAll();
+  }
+}
+
+function redo(state) {
+  // Don't redo while a polygon is being drawn — finish or cancel it first
+  if (state.polyPoints.length > 0) return;
+  const obj = state.redoStack.pop();
+  if (obj) {
+    state.fc.add(obj);
+    state.undoStack.push(obj);
+    bringOverlaysToFront(state);
     state.fc.requestRenderAll();
   }
 }
@@ -1123,9 +1361,31 @@ function deleteSelected(state) {
   if (obj && obj._userShape) {
     state.fc.remove(obj);
     state.undoStack = state.undoStack.filter(s => s !== obj);
+    state.redoStack.length = 0; // delete invalidates redo
     state.fc.discardActiveObject();
     state.fc.requestRenderAll();
   }
+}
+
+function duplicateSelected(state) {
+  const obj = state.fc.getActiveObject();
+  if (!obj || !obj._userShape) return;
+  obj.clone((cloned) => {
+    cloned.set({
+      left: (obj.left || 0) + 20,
+      top:  (obj.top  || 0) + 20,
+      _userShape: true,
+      selectable: true,
+      hasControls: true,
+    });
+    cloned.setCoords();
+    state.fc.add(cloned);
+    pushUndo(state, cloned);
+    state.fc.discardActiveObject();
+    state.fc.setActiveObject(cloned);
+    bringOverlaysToFront(state);
+    state.fc.requestRenderAll();
+  });
 }
 
 function clearAll(state) {
@@ -1133,6 +1393,7 @@ function clearAll(state) {
   cancelPolygon(state);
   state.undoStack.forEach(s => state.fc.remove(s));
   state.undoStack = [];
+  state.redoStack = [];
   state.fc.requestRenderAll();
 }
 
@@ -1237,6 +1498,42 @@ document.getElementById('generateBtn').addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
     progress.textContent = '✗ Error generating images: ' + err.message;
+  }
+});
+
+// ============================================================
+// KEYBOARD SHORTCUTS — Ctrl/Cmd + Z (undo) / Y or Shift+Z (redo) / D (duplicate)
+// Targets the photo the user most recently interacted with.
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  // Ignore when typing in any input/textarea (customer name, address, etc.)
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+
+  let idx = lastActivePhotoIdx;
+  if (idx == null && photos.length === 1) idx = 0; // single-photo case is unambiguous
+  const state = idx != null ? photos[idx] : null;
+  if (!state) return;
+
+  const ctrl = e.ctrlKey || e.metaKey;
+  const k = e.key.toLowerCase();
+
+  if (ctrl && k === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    undo(state);
+  } else if (ctrl && (k === 'y' || (k === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    redo(state);
+  } else if (ctrl && k === 'd') {
+    e.preventDefault();
+    duplicateSelected(state);
+  } else if (!ctrl && (k === 'delete' || k === 'backspace')) {
+    // Only act if a user shape is selected; otherwise let the browser handle the key
+    const obj = state.fc.getActiveObject();
+    if (obj && obj._userShape) {
+      e.preventDefault();
+      deleteSelected(state);
+    }
   }
 });
 </script>
